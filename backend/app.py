@@ -2,13 +2,12 @@ from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import os
 import tempfile
-import sys
 import traceback
 import re
 
-# Add the path to your endtoend.py script
-
-sys.path.append("/home/darpan/Desktop/Blockdiagram/Chart-Generation-using-LLMs")
+# Import local modules (endtoend.py and summary_refined.py are in the same folder)
+# Avoid manipulating sys.path with hard-coded absolute paths so imports work in
+# different environments (dev, CI, production).
 from endtoend import pdf_to_mermaid_complete, text_to_mermaid_complete
 from summary_refined import PDFSummarizer
 # Note: import mermaid_code lazily inside endpoints to avoid import-time
@@ -166,4 +165,6 @@ def health_check():
     return jsonify({'status': 'healthy'})
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    # Bind to 0.0.0.0 so the server is reachable from other containers/hosts if needed.
+    # For local development this will still be accessible at http://localhost:5000
+    app.run(debug=True, port=5000, host='0.0.0.0')
