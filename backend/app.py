@@ -165,6 +165,12 @@ def health_check():
     return jsonify({'status': 'healthy'})
 
 if __name__ == '__main__':
-    # Bind to 0.0.0.0 so the server is reachable from other containers/hosts if needed.
-    # For local development this will still be accessible at http://localhost:5000
-    app.run(debug=True, port=5000, host='0.0.0.0')
+    # Read host/port from environment so this app can run in cloud platforms
+    # (they typically provide a PORT env var). Use sensible defaults for
+    # local development.
+    host = os.getenv('HOST', '0.0.0.0')
+    port = int(os.getenv('PORT', 5000))
+    debug_flag = os.getenv('FLASK_DEBUG', 'False').lower() in ('1', 'true', 'yes')
+
+    # Start Flask (for production use a proper WSGI server like gunicorn)
+    app.run(debug=debug_flag, port=port, host=host)
