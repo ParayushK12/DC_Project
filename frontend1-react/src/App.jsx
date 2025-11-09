@@ -93,7 +93,7 @@ export default function App() {
   return (
     <div className="app">
       <header>
-        <h1>LLM → Blockdiagram (React)</h1>
+        <h1>RAG based chart generator</h1>
         <p className="muted">Enter simple text or upload a PDF. The backend will summarize and generate Mermaid diagram code.</p>
       </header>
 
