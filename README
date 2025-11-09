@@ -1,0 +1,251 @@
+# Blockdiagram — Diagram generation with LLMs
+
+An opinionated, easy-to-run collection of utilities that extract text from PDFs, summarize the content with LLMs and produce Mermaid diagrams automatically. This folder groups the small backend, example notebooks, Mermaid inputs, and a lightweight frontend used for demoing generated diagrams.
+
+Why this README?
+- Clear, copy-paste installation steps
+- Secure handling of API keys (never commit secrets)
+- Quick-start for developers and contributors
+
+---
+
+## Highlights
+- PDF text extraction using `pdfplumber` / `pypdf`
+- Structured summarization using LangChain + Google Gemini (optional)
+- Mermaid flowchart generation using LLMs (Mistral / Gemini integration examples)
+- Small Flask backend to process uploads and return Mermaid code
+- Vite + React demo frontend in `frontend/llm-chart-scribe`
+
+---
+
+## Project layout (important files)
+
+- `backend/` — Flask server (`app.py`) that accepts a PDF and returns Mermaid code and summary
+ - `backend/` — Flask server (`app.py`) that accepts a PDF or raw text and returns Mermaid code and summary
+- `requirements.txt` — consolidated Python dependencies for the Blockdiagram folder
+- `.env.example` — example environment variables (DO NOT put secrets here)
+- `frontend/llm-chart-scribe/` — Vite + React demo UI for uploading PDFs and viewing generated diagrams
+- `Chart-Generation-using-LLMs/` — LLM pipelines, prompts and helper scripts used by the backend
+- `test/` and `.mmd` files — sample inputs and HTML outputs for quick reference
+
+---
+
+## Quick start — run locally (recommended)
+These instructions assume you are at the repo root and have Python 3.8+ and Bun (or Node.js/npm) installed.
+
+1) Clone and change into repo
+
+```bash
+git clone <your-repo-url>
+cd Chart-Generation-using-LLMs
+```
+
+2) Prepare environment files
+
+Copy the example `.env` files and fill in real values locally (never commit `.env`):
+
+```bash
+# top-level for scripts that use it
+cp .env.example .env
+
+# backend/example (if present)
+cp backend/.env.example backend/.env
+
+# frontend (client-side placeholders)
+cp frontend/llm-chart-scribe/.env.example frontend/llm-chart-scribe/.env
+```
+
+Edit `.env` files and add your keys (examples):
+
+```
+GEMINI_API_KEY=sk-xxx-your-gemini-key
+MISTRAL_API_KEY=sk-xxx-your-mistral-key
+MY_SERVICE_API_KEY=sk-xxx-your-backend-key
+VITE_API_BASE_URL=http://localhost:5000
+```
+
+3) Install and run the Python backend
+
+```bash
+cd backend
+python3 -m venv .venv        # optional but recommended
+source .venv/bin/activate
+pip install -r ../requirements.txt
+# run the Flask API (adjust if your entrypoint differs)
+python app.py
+```
+
+The backend listens by default on port 5000. It exposes an endpoint `/api/process-pdf` that accepts a `multipart/form-data` POST with a `file` field (PDF).
+
+The backend also exposes `/api/process-text` which accepts a JSON POST with a `text` field: `{"text": "..."}`. This allows pasting or sending plain text directly to the summarizer + mermaid generator.
+
+
+4) Install and run the frontend demo (using Bun)
+
+If you use Bun (recommended for faster installs and startup):
+
+```bash
+cd ../frontend/llm-chart-scribe
+bun install
+# start the dev server
+bun run dev
+```
+
+If you prefer npm or yarn, the equivalent commands are:
+
+```bash
+# npm
+npm install
+npm run dev
+
+# or yarn
+yarn
+yarn dev
+```
+
+Open the dev server URL shown by Vite (usually http://localhost:5173) and upload a PDF to test the end-to-end pipeline.
+
+---
+
+## Option C — host frontend and backend separately (recommended for scalability)
+
+This repository works well when the frontend and backend are deployed independently: host the frontend on a static host (Vercel/Netlify) and the backend on a server or Hugging Face Space. Below are the steps and exact environment vars to wire them together.
+
+High-level flow:
+- Frontend (Vite/React) is built and served from a static host (Vercel, Netlify, or S3 + CDN).
+- Backend (Flask) runs on a separate host (Hugging Face Space, VPS, Heroku, Railway) and exposes `/api/*` endpoints.
+- Frontend calls backend using a base URL stored in `VITE_API_BASE_URL`.
+
+Steps to deploy separately
+
+1) Prepare frontend for deployment
+
+```bash
+cd frontend/llm-chart-scribe
+# build production assets
+# if using bun: bun build -- (or npm run build)
+npm run build
+```
+
+Deploy the generated `dist/` to Vercel/Netlify or push the frontend repo to your chosen host. During deployment set an environment variable in the host named `VITE_API_BASE_URL` with the backend URL (for example `https://my-backend.example.com`).
+
+2) Prepare backend for deployment
+
+- Ensure your backend reads the frontend origin(s) from `FRONTEND_ORIGINS` and binds to the correct host/port. Example env vars used by this repo:
+
+```
+PORT=5000
+FRONTEND_ORIGINS=https://your-frontend.vercel.app
+GEMINI_API_KEY=...
+MISTRAL_API_KEY=...
+```
+
+- For Hugging Face Spaces you can either use Docker or the Python runtime. When using a separate host, set `FRONTEND_ORIGINS` to the frontend URL so CORS is restricted to your site.
+
+3) Wire frontend to backend
+
+- On your frontend host, set `VITE_API_BASE_URL` to the backend base URL, e.g. `https://my-backend.example.com`.
+- On your backend host, set `FRONTEND_ORIGINS` to the frontend URL.
+
+4) Local dev proxy (optional)
+
+During local frontend development you can proxy `/api` to your running backend by setting `VITE_API_BASE_URL` in `frontend/llm-chart-scribe/.env` (the Vite dev server picks it up). A dev proxy is included in `vite.config.ts` and will forward `/api` requests to that base URL.
+
+Security and secrets
+
+- Do NOT put secret keys in frontend env vars. Use the backend to keep secrets.
+- Manage runtime secrets in the deployment platform (Vercel/Netlify/Spaces secrets, Heroku config vars, GitHub Actions secrets).
+
+Notes
+
+- The backend in this repo supports a `FRONTEND_ORIGINS` env var (comma-separated) to restrict CORS. If unset, CORS is permissive (useful for initial dev).
+- The frontend expects `VITE_API_BASE_URL` at build time to call your backend. Make sure you configure that env var in your host.
+
+
+---
+
+## Environment variables & secret handling (best practices)
+
+- Never commit `.env` or files containing secrets. Use `.env.example` to list variable names and placeholders.
+- For local development use `.env` files together with `python-dotenv` (already used in the backend code).
+- For production, set secrets in your host/CI provider (GitHub Actions secrets, Vercel/Netlify env, Docker secrets, Kubernetes secrets).
+- Client-side environment variables (Vite) must be prefixed with `VITE_` — remember these are visible in the browser and are NOT secret.
+- Prefer a backend proxy: keep the LLM/API keys on the server and call provider APIs from your backend. The frontend should call your backend endpoints.
+
+If you suspect keys have been committed, rotate them immediately and consider using BFG or `git-filter-repo` to remove them from history (this is destructive and requires coordination).
+
+---
+
+## Development notes & common commands
+
+- Run Python linter / formatter:
+
+```bash
+pip install black flake8
+black .
+flake8 .
+```
+
+- Run tests (if you add them):
+
+```bash
+pytest
+```
+
+---
+
+## API (backend)
+
+POST /api/process-pdf
+- Accepts: form-data `file` (PDF)
+- Returns: JSON containing `mermaid_code`, `summary`, and some stats
+
+POST /api/process-text
+- Accepts: JSON `{ "text": "..." }` (raw text to summarize and convert to mermaid)
+- Returns: JSON containing `mermaid_code`, `summary`, and some stats
+
+Example using curl:
+
+```bash
+curl -F "file=@./example.pdf" http://localhost:5000/api/process-pdf
+```
+
+Example sending raw text with curl:
+
+```bash
+curl -s -X POST http://localhost:5000/api/process-text \
+	-H "Content-Type: application/json" \
+	-d '{"text":"This is some input text to summarize and convert to mermaid."}'
+```
+
+---
+
+## Troubleshooting
+
+- Missing API key error: make sure `.env` contains `GEMINI_API_KEY` or `MISTRAL_API_KEY` and backend is restarted after changes.
+- Frontend cannot reach backend: ensure `VITE_API_BASE_URL` points at the backend URL (include correct port), and CORS is enabled in `backend/app.py`.
+- PDF extraction fails: try alternative extractor (`pdfplumber` vs `PyMuPDF`) — see `pdf_scanner_alternative.py` for options.
+
+---
+
+## Contributing
+
+1. Create a branch: `git checkout -b feat/your-feature`
+2. Make changes and add tests where appropriate
+3. Open a PR and request review
+
+Please avoid committing any secrets or `.env` files.
+
+---
+
+## License & credits
+
+This folder contains code adapted and assembled from multiple helper scripts and examples. Add a LICENSE file at the repo root if you want to apply an explicit license.
+
+If you'd like, I can:
+- Polish `frontend/llm-chart-scribe` to proxy requests to the backend instead of calling external APIs directly, or
+- Create a PR that moves these README and `.env.example` changes onto a feature branch and opens it for review.
+
+---
+
+Last updated: 2025-11-04

@@ -1,0 +1,34 @@
+# Requirements for Blockdiagram project (Python parts)
+# Target: Python 3.8+
+
+# Web / API
+Flask>=2.0
+Flask-Cors>=3.0
+
+# Environment management
+python-dotenv>=1.0
+
+# PDF processing
+pypdf>=3.0
+pdfplumber>=0.7
+# Optional / alternative PDF backends (uncomment if you use them)
+# PyMuPDF (fitz) for alternative extraction
+PyMuPDF>=1.22
+# pdfminer.six as another alternative
+pdfminer.six>=20211012
+
+# LLM / AI clients and LangChain
+mistralai>=1.0
+langchain>=0.1.0
+langchain-google-genai>=1.0.0
+
+# Utilities / dev (optional)
+pytest>=7.0
+black>=22.0.0
+
+# Notes:
+# - Install only what you need for your environment. Some packages are listed as
+#   optional alternatives to cover different PDF extraction strategies used across
+#   the project files (pdfplumber, PyMuPDF, pdfminer.six).
+# - If a specific package version is required by your deployment platform, pin
+#   that version explicitly.
