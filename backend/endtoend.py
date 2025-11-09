@@ -8,17 +8,21 @@ This script performs the complete pipeline:
 """
 
 import os
+import sys
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.documents import Document
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from pdf_scanner_alternative import extract_with_pdfplumber
-from dotenv import load_dotenv
+# NOTE: we intentionally avoid loading a .env file here. API keys can be
+# provided directly to the functions (preferred) or via environment
+# variables already set in the runtime (e.g., CI, container env). This
+# avoids depending on .env files at runtime.
 
 
 
 
-def pdf_to_mermaid_complete(pdf_path: str, output_file: str = None):
+def pdf_to_mermaid_complete(pdf_path: str, output_file: str = None, api_key: str = None):
     """
     Complete pipeline: PDF → Summary → Mermaid Code
     
@@ -30,13 +34,11 @@ def pdf_to_mermaid_complete(pdf_path: str, output_file: str = None):
         Dictionary with summary and mermaid_code
     """
     
-    # Load environment variables
-    load_dotenv()
-    
-    # Get API key
-    api_key = os.getenv("GEMINI_API_KEY")
+    # Resolve API key: prefer explicit argument; fall back to environment
     if not api_key:
-        raise ValueError("GEMINI_API_KEY not found in environment variables")
+        api_key = os.getenv("AIzaSyACb8q6NOXzBDvVRmV7rSWhygSYO39AMS0")
+    if not api_key:
+        raise ValueError("GEMINI_API_KEY must be supplied either via the api_key parameter or as an environment variable")
     
     # Initialize Gemini model
     try:
@@ -237,13 +239,11 @@ def text_to_mermaid_complete(input_text: str, output_file: str = None):
     if not isinstance(input_text, str) or not input_text.strip():
         raise ValueError("input_text must be a non-empty string")
 
-    # Load environment variables
-    load_dotenv()
-
-    # Get API key
-    api_key = os.getenv("GEMINI_API_KEY")
+    # Resolve API key: prefer explicit argument; fall back to environment
     if not api_key:
-        raise ValueError("GEMINI_API_KEY not found in environment variables")
+        api_key = os.getenv("AIzaSyACb8q6NOXzBDvVRmV7rSWhygSYO39AMS0")
+    if not api_key:
+        raise ValueError("GEMINI_API_KEY must be supplied either via the api_key parameter or as an environment variable")
 
     # Initialize Gemini model
     try:
@@ -405,18 +405,26 @@ def display_results(results):
 
 # Main execution
 if __name__ == "__main__":
-    # Configuration - Update these paths
+    # Configuration - Update these paths or pass an API key as the first
+    # command-line argument. Example:
+    #    python endtoend.py <GEMINI_API_KEY>
     PDF_PATH = "Chart-Generation-using-LLMs/docs/doc4.pdf"  # Change this to your PDF file path
     OUTPUT_FILE = "generated_diagram.html"  # Changed from .mmd to .html
-    
+
+    # API key resolution: CLI arg takes precedence, then environment variable
+    cli_api_key = None
+    if len(sys.argv) > 1 and sys.argv[1].strip():
+        cli_api_key = sys.argv[1].strip()
+
     try:
         # Run the complete pipeline
         print("🚀 Starting PDF to Mermaid generation pipeline...")
         print(f"📄 Processing: {PDF_PATH}")
-        
+
         results = pdf_to_mermaid_complete(
             pdf_path=PDF_PATH,
-            output_file=OUTPUT_FILE
+            output_file=OUTPUT_FILE,
+            api_key=cli_api_key
         )
         
         # Display the results
